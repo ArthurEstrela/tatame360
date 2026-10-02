@@ -1,0 +1,34 @@
+{
+    "name": "Tatame360",
+    "short_name": "Tatame360",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#F5F5F0",
+    "theme_color": "#192923",
+    "description": "Gestão, presença e acompanhamento para academias de Jiu-Jitsu.",
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "icons/Icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}

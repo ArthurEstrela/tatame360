@@ -1,0 +1,18 @@
+services:
+  postgres:
+    image: postgres:17.6
+    environment:
+      POSTGRES_DB: tatame360
+      POSTGRES_USER: tatame360
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?Configure DATABASE_PASSWORD no .env}
+    ports:
+      - "127.0.0.1:54329:5432"
+    volumes:
+      - tatame360_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tatame360 -d tatame360"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+volumes:
+  tatame360_data:

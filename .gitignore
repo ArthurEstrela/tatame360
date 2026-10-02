@@ -1,0 +1,10 @@
+.env
+.tools/
+**/target/
+**/build/
+**/.dart_tool/
+**/local.properties
+*.log
+.runtime/
+**/.idea/
+**/*.iml
