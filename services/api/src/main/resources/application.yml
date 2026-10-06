@@ -4,7 +4,7 @@ server:
     include-message: never
 spring:
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://localhost:54329/tatame360}
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:55432/tatame360}
     username: ${DATABASE_USER:tatame360}
     password: ${DATABASE_PASSWORD}
   flyway:
@@ -32,3 +32,4 @@ app:
   allowed-origin: ${APP_ORIGIN:http://localhost:7357}
   cookie-secure: ${COOKIE_SECURE:true}
   demo-password: ${DEMO_PASSWORD:}
+  expose-account-tokens: ${EXPOSE_ACCOUNT_TOKENS:false}

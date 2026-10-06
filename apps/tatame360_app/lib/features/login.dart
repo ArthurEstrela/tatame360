@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../core/api.dart';
 import '../core/session.dart';
@@ -158,6 +159,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Text('Entrar na academia'),
+                ),
+                const SizedBox(height: 10),
+                TextButton(
+                  onPressed: busy ? null : () => context.go('/forgot-password'),
+                  child: const Text('Esqueci minha senha'),
                 ),
                 const SizedBox(height: 28),
                 const Text(

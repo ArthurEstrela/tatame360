@@ -5,9 +5,11 @@ Primeira entrega vertical do SaaS para academias de Jiu-Jitsu. O repositório co
 ## O que funciona
 
 - login com access token curto e refresh rotativo;
+- recuperação de senha com token único e revogação das sessões anteriores;
 - isolamento de dados por academia e unidade;
+- convites, papéis e ativação/desativação da equipe;
 - cadastro e consulta de alunos;
-- importação CSV com prévia e confirmação;
+- importação CSV responsiva com modelo, prévia, duplicatas, turma e confirmação idempotente;
 - criação de turmas e geração de sessões;
 - chamada manual atômica e idempotente;
 - graduação explícita por owner, com controle de versão;
@@ -43,6 +45,8 @@ mvn spring-boot:run
 
 A API usa `http://localhost:18080`. O perfil `dev` cria duas academias e contas sintéticas. A senha é o valor local de `DEMO_PASSWORD`; o usuário principal é `owner@raiz.example`. Nunca publique esse perfil nem essa credencial.
 
+`EXPOSE_ACCOUNT_TOKENS=true` mostra o atalho de recuperação somente no ambiente local. Em produção, mantenha `false` e conecte o adaptador de e-mail transacional.
+
 Em outro terminal:
 
 ```powershell
@@ -77,4 +81,4 @@ infra               PostgreSQL local
 docs                PRD, decisões, status e runbooks
 ```
 
-As dependências externas de push, e-mail e pagamentos ainda não fazem parte desta entrega. A interface não simula envio ou cobrança.
+As dependências externas de push, e-mail e pagamentos ainda não fazem parte desta entrega. Convites são compartilhados por link; no ambiente local, a recuperação exibe um atalho explícito de teste.

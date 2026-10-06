@@ -31,13 +31,24 @@ class _StudentsPageState extends ConsumerState<StudentsPage> {
           'Alunos',
           'Cadastros, vínculos e histórico da academia.',
           action: session.manager
-              ? FilledButton.icon(
-                  onPressed: () async {
-                    await _newStudent(context, session);
-                    setState(() => revision++);
-                  },
-                  icon: const Icon(Icons.person_add_alt_1),
-                  label: const Text('Novo aluno'),
+              ? Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () => context.go('/students/import'),
+                      icon: const Icon(Icons.upload_file_outlined),
+                      label: const Text('Importar CSV'),
+                    ),
+                    FilledButton.icon(
+                      onPressed: () async {
+                        await _newStudent(context, session);
+                        setState(() => revision++);
+                      },
+                      icon: const Icon(Icons.person_add_alt_1),
+                      label: const Text('Novo aluno'),
+                    ),
+                  ],
                 )
               : null,
         ),

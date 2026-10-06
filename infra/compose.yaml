@@ -6,7 +6,7 @@ services:
       POSTGRES_USER: tatame360
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?Configure DATABASE_PASSWORD no .env}
     ports:
-      - "127.0.0.1:54329:5432"
+      - "127.0.0.1:55432:5432"
     volumes:
       - tatame360_data:/var/lib/postgresql/data
     healthcheck:

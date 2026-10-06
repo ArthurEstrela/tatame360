@@ -17,6 +17,64 @@ paths:
       responses:
         '200': {description: Sessão iniciada}
         '401': {$ref: '#/components/responses/Error'}
+  /auth/password/forgot:
+    post:
+      security: []
+      summary: Solicita recuperação sem revelar se o e-mail existe
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties: {email: {type: string, format: email}}
+      responses:
+        '200': {description: Solicitação recebida}
+        '429': {$ref: '#/components/responses/Error'}
+  /auth/password/reset:
+    post:
+      security: []
+      summary: Consome token de uso único e encerra as sessões existentes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token: {type: string}
+                password: {type: string, minLength: 12, maxLength: 72}
+      responses:
+        '200': {description: Senha redefinida}
+        '410': {$ref: '#/components/responses/Error'}
+  /auth/invitations/{token}:
+    parameters:
+      - {name: token, in: path, required: true, schema: {type: string}}
+    get:
+      security: []
+      responses:
+        '200': {description: Dados públicos mínimos do convite}
+        '410': {$ref: '#/components/responses/Error'}
+  /auth/invitations/{token}/accept:
+    parameters:
+      - {name: token, in: path, required: true, schema: {type: string}}
+    post:
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                name: {type: string, maxLength: 120}
+                password: {type: string, minLength: 12, maxLength: 72}
+      responses:
+        '200': {description: Convite aceito}
+        '410': {$ref: '#/components/responses/Error'}
   /me:
     get:
       responses:
@@ -43,6 +101,85 @@ paths:
         '200': {description: Aluno e vínculo criados}
         '409': {$ref: '#/components/responses/Error'}
         '422': {$ref: '#/components/responses/Error'}
+  /academies/{academyId}/imports/preview:
+    parameters: [{$ref: '#/components/parameters/AcademyId'}]
+    post:
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties: {file: {type: string, format: binary}}
+      responses:
+        '200': {description: Lote temporário com validação por linha}
+        '422': {$ref: '#/components/responses/Error'}
+  /academies/{academyId}/imports/{importId}/confirm:
+    parameters:
+      - {$ref: '#/components/parameters/AcademyId'}
+      - {name: importId, in: path, required: true, schema: {type: string, format: uuid}}
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [acceptPossibleDuplicates]
+              properties:
+                acceptPossibleDuplicates: {type: boolean}
+                classId: {type: [string, 'null'], format: uuid}
+      responses:
+        '200': {description: Lote confirmado de forma idempotente}
+        '409': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+  /academies/{academyId}/team:
+    parameters: [{$ref: '#/components/parameters/AcademyId'}]
+    get:
+      responses: {'200': {description: Integrantes e convites da academia}}
+  /academies/{academyId}/team/{userId}:
+    parameters:
+      - {$ref: '#/components/parameters/AcademyId'}
+      - {name: userId, in: path, required: true, schema: {type: string, format: uuid}}
+    patch:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role, active]
+              properties:
+                role: {type: string, enum: [MANAGER, INSTRUCTOR, FRONT_DESK]}
+                active: {type: boolean}
+      responses:
+        '200': {description: Acesso atualizado}
+        '403': {$ref: '#/components/responses/Error'}
+  /academies/{academyId}/invitations:
+    parameters: [{$ref: '#/components/parameters/AcademyId'}]
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, role]
+              properties:
+                name: {type: string, maxLength: 120}
+                email: {type: string, format: email}
+                role: {type: string, enum: [MANAGER, INSTRUCTOR, FRONT_DESK]}
+      responses:
+        '200': {description: Convite de uso único criado}
+        '409': {$ref: '#/components/responses/Error'}
+  /academies/{academyId}/invitations/{invitationId}/revoke:
+    parameters:
+      - {$ref: '#/components/parameters/AcademyId'}
+      - {name: invitationId, in: path, required: true, schema: {type: string, format: uuid}}
+    post:
+      responses:
+        '200': {description: Convite revogado}
   /academies/{academyId}/class-templates:
     parameters: [{$ref: '#/components/parameters/AcademyId'}]
     get:

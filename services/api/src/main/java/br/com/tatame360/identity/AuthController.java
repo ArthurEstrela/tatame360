@@ -17,15 +17,18 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1")
 public class AuthController {
-    private final Store store; private final PasswordEncoder encoder; private final Access access; private final boolean secure;
+    private final Store store; private final PasswordEncoder encoder; private final Access access; private final boolean secure; private final boolean exposeAccountTokens;
     private final String dummyHash;
     private final ConcurrentHashMap<String,Window> attempts=new ConcurrentHashMap<>();
     private record Window(long time,int count){}
-    public AuthController(Store store,PasswordEncoder encoder,Access access,@Value("${app.cookie-secure}") boolean secure) {
-        this.store=store;this.encoder=encoder;this.access=access;this.secure=secure;dummyHash=encoder.encode(UUID.randomUUID().toString());
+    public AuthController(Store store,PasswordEncoder encoder,Access access,@Value("${app.cookie-secure}") boolean secure,
+                          @Value("${app.expose-account-tokens:false}") boolean exposeAccountTokens) {
+        this.store=store;this.encoder=encoder;this.access=access;this.secure=secure;this.exposeAccountTokens=exposeAccountTokens;dummyHash=encoder.encode(UUID.randomUUID().toString());
     }
     public record Login(@NotBlank @Email @Size(max=254) String email,@NotBlank @Size(max=72) String password,boolean mobile){}
     public record Refresh(@Size(max=200) String refreshToken,boolean mobile){}
+    public record ForgotPassword(@NotBlank @Email @Size(max=254) String email){}
+    public record ResetPassword(@NotBlank @Size(max=200) String token,@NotBlank @Size(min=12,max=72) String password){}
     private void limit(String ip) {
         long now=System.currentTimeMillis();
         attempts.entrySet().removeIf(e->now-e.getValue().time>900000);
@@ -61,6 +64,34 @@ public class AuthController {
         String token=input.mobile()?input.refreshToken():cookie(req);
         if(token!=null) store.db.update("update auth_session set revoked=true where family_id in (select family_id from auth_session where refresh_hash=?)",Store.hash(token));
         response.addHeader("Set-Cookie",refreshCookie("",0));return Map.of("ok",true);
+    }
+    @PostMapping("/auth/password/forgot") @Transactional
+    public Object forgotPassword(@Valid @RequestBody ForgotPassword input,HttpServletRequest request) {
+        limit(request.getRemoteAddr());
+        String email=input.email().trim().toLowerCase(Locale.ROOT);String resetToken=null;
+        var users=store.db.queryForList("select id from app_user where email=? and active",email);
+        if(!users.isEmpty()) {
+            UUID user=(UUID)users.getFirst().get("id");resetToken=token();
+            store.db.update("update password_reset set consumed_at=now() where user_id=? and consumed_at is null",user);
+            store.db.update("insert into password_reset(id,user_id,token_hash,expires_at) values (?,?,?,now()+interval '30 minutes')",UUID.randomUUID(),user,Store.hash(resetToken));
+        }
+        var result=new LinkedHashMap<String,Object>();
+        result.put("message","Se o e-mail estiver cadastrado, você receberá as instruções para redefinir a senha.");
+        if(exposeAccountTokens&&resetToken!=null)result.put("resetToken",resetToken);
+        return result;
+    }
+    @PostMapping("/auth/password/reset") @Transactional
+    public Object resetPassword(@Valid @RequestBody ResetPassword input,HttpServletRequest request) {
+        limit(request.getRemoteAddr());
+        var rows=store.db.queryForList("select id,user_id from password_reset where token_hash=? and consumed_at is null and expires_at>now() for update",Store.hash(input.token()));
+        if(rows.isEmpty())throw new ApiException(410,"TOKEN_INVALID","Este link expirou ou já foi utilizado.");
+        UUID reset=(UUID)rows.getFirst().get("id"),user=(UUID)rows.getFirst().get("user_id");
+        store.db.update("update app_user set password_hash=? where id=?",encoder.encode(input.password()),user);
+        store.db.update("update password_reset set consumed_at=now() where id=?",reset);
+        store.db.update("update auth_session set revoked=true where user_id=?",user);
+        for(var assignment:store.db.queryForList("select tenant_id from role_assignment where user_id=? and active",user))
+            store.event((UUID)assignment.get("tenant_id"),user,"PasswordReset",reset);
+        return Map.of("ok",true);
     }
     @GetMapping("/me")
     public Object me() {

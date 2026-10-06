@@ -23,6 +23,9 @@ public class ImportController {
         String header=text.lines().findFirst().orElse("");char delimiter=header.contains(";")?';':',';
         var format=CSVFormat.DEFAULT.builder().setDelimiter(delimiter).setHeader().setSkipHeaderRecord(true).setTrim(true).get();
         var rows=new ArrayList<Map<String,Object>>();
+        var existingNames=new HashSet<String>();
+        for(var existing:store.db.queryForList("select lower(name) as name from student where tenant_id=?",academy))existingNames.add(existing.get("name").toString());
+        var namesInFile=new HashSet<String>();
         try(var parser=CSVParser.parse(text,format)){
             if(!parser.getHeaderMap().keySet().containsAll(List.of("nome","data_inicio")))throw ApiException.invalid("Use as colunas nome e data_inicio (AAAA-MM-DD). Contato opcional: email e telefone.");
             for(var row:parser){
@@ -34,7 +37,8 @@ public class ImportController {
                 try{if(LocalDate.parse(starts).isAfter(LocalDate.now()))errors.add("Data de início futura.");}catch(Exception e){errors.add("Data inválida: use AAAA-MM-DD.");}
                 if(email.length()>254||(!email.isBlank()&&!email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")))errors.add("E-mail inválido.");
                 if(phone.length()>30)errors.add("Telefone muito longo.");
-                boolean duplicate=store.db.queryForObject("select count(*) from student where tenant_id=? and lower(name)=lower(?)",Integer.class,academy,name)>0||rows.stream().anyMatch(r->name.equalsIgnoreCase(r.get("name").toString()));
+                String normalizedName=name.toLowerCase(Locale.ROOT);
+                boolean duplicate=existingNames.contains(normalizedName)||!namesInFile.add(normalizedName);
                 rows.add(Map.of("line",row.getRecordNumber()+1,"name",name,"startsOn",starts,"email",email,"phone",phone,"errors",errors,"possibleDuplicate",duplicate));
             }
         }catch(IllegalArgumentException|UncheckedIOException e){throw ApiException.invalid("CSV inválido. Confira delimitadores e aspas.");}
@@ -43,7 +47,7 @@ public class ImportController {
         store.db.update("insert into import_batch(id,tenant_id,author_id,rows_data) values (?,?,?,?::jsonb)",id,academy,scope.user(),store.json(rows));
         return Map.of("id",id,"rows",rows);
     }
-    public record Confirm(boolean acceptPossibleDuplicates){}
+    public record Confirm(boolean acceptPossibleDuplicates,UUID classId){}
     @PostMapping("/{id}/confirm") @Transactional
     @SuppressWarnings("unchecked")
     public Object confirm(@PathVariable UUID academy,@PathVariable UUID id,@RequestBody Confirm input){
@@ -53,7 +57,8 @@ public class ImportController {
         if((boolean)batch.get("confirmed"))return Map.of("ok",true,"imported",rows.size());
         if(rows.stream().anyMatch(r->!((List<?>)r.get("errors")).isEmpty()))throw ApiException.invalid("Corrija as linhas inválidas e envie o arquivo novamente.");
         if(!input.acceptPossibleDuplicates()&&rows.stream().anyMatch(r->Boolean.TRUE.equals(r.get("possibleDuplicate"))))throw ApiException.conflict("Revise e confirme os possíveis alunos duplicados.");
-        for(var row:rows)members.createStudent(scope,new MemberController.StudentInput(row.get("name").toString(),row.get("email").toString(),row.get("phone").toString(),LocalDate.parse(row.get("startsOn").toString()),null));
+        if(input.classId()!=null) store.one("select id from class_template where tenant_id=? and unit_id=? and id=? and active",academy,scope.unit(),input.classId());
+        for(var row:rows)members.createStudent(scope,new MemberController.StudentInput(row.get("name").toString(),row.get("email").toString(),row.get("phone").toString(),LocalDate.parse(row.get("startsOn").toString()),input.classId()));
         store.db.update("update import_batch set confirmed=true where tenant_id=? and id=?",academy,id);
         store.event(academy,scope.user(),"ImportConfirmed",id);return Map.of("ok",true,"imported",rows.size());
     }

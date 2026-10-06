@@ -100,6 +100,17 @@ class Api {
       )).data;
   Future<dynamic> patch(String path, Object data) async =>
       (await dio.patch<dynamic>(path, data: data)).data;
+  Future<dynamic> uploadCsv(
+    String path,
+    Uint8List bytes,
+    String fileName,
+  ) async => (await dio.post<dynamic>(
+    path,
+    data: FormData.fromMap({
+      'file': MultipartFile.fromBytes(bytes, filename: fileName),
+    }),
+    options: Options(headers: {'Idempotency-Key': const Uuid().v4()}),
+  )).data;
   static String message(Object error) {
     if (error is DioException) {
       final data = error.response?.data;

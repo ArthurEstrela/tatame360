@@ -4,11 +4,14 @@ import 'package:go_router/go_router.dart';
 
 import 'core/session.dart';
 import 'features/attention.dart';
+import 'features/account_access.dart';
 import 'features/classes.dart';
 import 'features/dashboard.dart';
 import 'features/login.dart';
 import 'features/shell.dart';
+import 'features/student_import.dart';
 import 'features/students.dart';
+import 'features/team.dart';
 import 'shared/ui.dart';
 
 class TatameApp extends ConsumerStatefulWidget {
@@ -27,11 +30,19 @@ class _TatameAppState extends ConsumerState<TatameApp> {
       initialLocation: '/',
       refreshListenable: session,
       redirect: (_, state) {
+        final public = {
+          '/login',
+          '/forgot-password',
+          '/reset-password',
+          '/invite',
+        }.contains(state.matchedLocation);
         if (session.loading) {
+          if (public) return null;
           return state.matchedLocation == '/loading' ? null : '/loading';
         }
+        if (public) return null;
         if (!session.authenticated) {
-          return state.matchedLocation == '/login' ? null : '/login';
+          return '/login';
         }
         if (state.matchedLocation == '/login' ||
             state.matchedLocation == '/loading') {
@@ -46,12 +57,31 @@ class _TatameAppState extends ConsumerState<TatameApp> {
               const Scaffold(body: Center(child: CircularProgressIndicator())),
         ),
         GoRoute(path: '/login', builder: (_, _) => const LoginPage()),
+        GoRoute(
+          path: '/forgot-password',
+          builder: (_, _) => const ForgotPasswordPage(),
+        ),
+        GoRoute(
+          path: '/reset-password',
+          builder: (_, state) => ResetPasswordPage(
+            token: state.uri.queryParameters['token'] ?? '',
+          ),
+        ),
+        GoRoute(
+          path: '/invite',
+          builder: (_, state) =>
+              InvitationPage(token: state.uri.queryParameters['token'] ?? ''),
+        ),
         ShellRoute(
           builder: (_, state, child) =>
               AppShell(path: state.uri.path, child: child),
           routes: [
             GoRoute(path: '/', builder: (_, _) => const DashboardPage()),
             GoRoute(path: '/students', builder: (_, _) => const StudentsPage()),
+            GoRoute(
+              path: '/students/import',
+              builder: (_, _) => const StudentImportPage(),
+            ),
             GoRoute(
               path: '/students/:id',
               builder: (_, state) =>
@@ -66,6 +96,10 @@ class _TatameAppState extends ConsumerState<TatameApp> {
             GoRoute(
               path: '/attention',
               builder: (_, _) => const AttentionPage(),
+            ),
+            GoRoute(
+              path: '/settings/team',
+              builder: (_, _) => const TeamPage(),
             ),
           ],
         ),

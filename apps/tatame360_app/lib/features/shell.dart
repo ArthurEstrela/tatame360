@@ -9,7 +9,7 @@ class AppShell extends ConsumerWidget {
   const AppShell({super.key, required this.path, required this.child});
   final String path;
   final Widget child;
-  static const items = [
+  static const baseItems = [
     ('/', 'Hoje', Icons.space_dashboard_outlined),
     ('/students', 'Alunos', Icons.people_outline),
     ('/classes', 'Agenda', Icons.calendar_month_outlined),
@@ -22,6 +22,11 @@ class AppShell extends ConsumerWidget {
       listenable: session,
       builder: (context, _) {
         final wide = MediaQuery.sizeOf(context).width >= 1000;
+        final items = [
+          ...baseItems,
+          if (session.manager)
+            ('/settings/team', 'Equipe', Icons.manage_accounts_outlined),
+        ];
         int selected = items.indexWhere(
           (i) => i.$1 == '/' ? path == '/' : path.startsWith(i.$1),
         );
